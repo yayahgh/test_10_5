@@ -78,7 +78,6 @@ class DataProcessor(object):
 		self.use_comments = args.use_comments
 		self.local_df_only = args.local_df_only
 		self.target_code_transform = args.target_code_transform
-		self.bow = args.bow
 		self.hierarchy = args.hierarchy
 		self.copy_mechanism = args.copy_mechanism
 		self.max_num_code_cells = args.max_num_code_cells
@@ -1198,57 +1197,33 @@ class DataProcessor(object):
 				else:
 					output_code_indices.append(code_context.index(tok))
 
-			if self.bow:
-				input_vector = None
-				word_vector = [0.0] * self.word_vocab_size
-				for word in input_word_seq:
-					if word == UNK_ID:
-						continue
-					word_vector[word] += 1.0
-				word_vector = np.array(word_vector)
-				word_vector /= len(input_word_seq)
-				input_vector = word_vector
-
-				code_context_vector = [0.0] * self.code_vocab_size
-				for tok in input_code_seq:
-					if word == UNK_ID:
-						continue
-					code_context_vector[tok] += 1.0
-				code_context_vector = np.array(code_context_vector)
-				code_context_vector /= len(input_code_seq)
-				input_vector = np.concatenate([input_vector, code_context_vector])
-				cur_data = {}
-				cur_data['input_vector'] = input_vector
-				cur_data['label'] = label
-				data.append(cur_data)
-			else:
-				cur_data = {}
-				cur_data['reserved_dfs'] = reserved_dfs
-				cur_data['reserved_vars'] = reserved_vars
-				cur_data['reserved_strs'] = reserved_strs
-				cur_data['target_dfs'] = target_dfs
-				cur_data['target_strs'] = target_strs
-				cur_data['target_vars'] = target_vars
-				cur_data['input_word_seq'] = input_word_seq
-				cur_data['input_code_seq'] = input_code_seq
-				cur_data['input_code_df_seq'] = input_code_df_seq
-				cur_data['input_code_var_seq'] = input_code_var_seq
-				cur_data['input_code_str_seq'] = input_code_str_seq
-				cur_data['input_code_nl_indices'] = input_code_nl_indices
-				cur_data['output_gt'] = output_gt
-				cur_data['output_code_seq'] = output_code_seq
-				cur_data['output_code_df_seq'] = output_code_df_seq
-				cur_data['output_code_var_seq'] = output_code_var_seq
-				cur_data['output_code_str_seq'] = output_code_str_seq
-				cur_data['output_code_mask'] = output_code_mask
-				cur_data['output_df_mask'] = output_df_mask
-				cur_data['output_var_mask'] = output_var_mask
-				cur_data['output_str_mask'] = output_str_mask
-				cur_data['output_code_nl_indices'] = output_code_nl_indices
-				cur_data['output_code_ctx_indices'] = output_code_ctx_indices
-				cur_data['output_code_indices'] = output_code_indices
-				cur_data['label'] = label
-				data.append(cur_data)
+			cur_data = {}
+			cur_data['reserved_dfs'] = reserved_dfs
+			cur_data['reserved_vars'] = reserved_vars
+			cur_data['reserved_strs'] = reserved_strs
+			cur_data['target_dfs'] = target_dfs
+			cur_data['target_strs'] = target_strs
+			cur_data['target_vars'] = target_vars
+			cur_data['input_word_seq'] = input_word_seq
+			cur_data['input_code_seq'] = input_code_seq
+			cur_data['input_code_df_seq'] = input_code_df_seq
+			cur_data['input_code_var_seq'] = input_code_var_seq
+			cur_data['input_code_str_seq'] = input_code_str_seq
+			cur_data['input_code_nl_indices'] = input_code_nl_indices
+			cur_data['output_gt'] = output_gt
+			cur_data['output_code_seq'] = output_code_seq
+			cur_data['output_code_df_seq'] = output_code_df_seq
+			cur_data['output_code_var_seq'] = output_code_var_seq
+			cur_data['output_code_str_seq'] = output_code_str_seq
+			cur_data['output_code_mask'] = output_code_mask
+			cur_data['output_df_mask'] = output_df_mask
+			cur_data['output_var_mask'] = output_var_mask
+			cur_data['output_str_mask'] = output_str_mask
+			cur_data['output_code_nl_indices'] = output_code_nl_indices
+			cur_data['output_code_ctx_indices'] = output_code_ctx_indices
+			cur_data['output_code_indices'] = output_code_indices
+			cur_data['label'] = label
+			data.append(cur_data)
 			indices.append(sample_idx)
 		print('Number of samples (before preprocessing): ', len(samples))
 		print('Number of samples (after filtering): ', len(data))
@@ -1282,111 +1257,105 @@ class DataProcessor(object):
 			max_output_code_mask_len = self.code_vocab_size + self.max_code_context_len
 		for idx in range(start_idx, min(start_idx + batch_size, data_size)):
 			cur_sample = data[idx]
-			if self.bow:
-				batch_vectors.append(cur_sample['input_vector'])
-			else:
-				batch_word_input.append(cur_sample['input_word_seq'])
-				max_word_len = max(max_word_len, len(cur_sample['input_word_seq']))
-				batch_code_input.append(cur_sample['input_code_seq'])
-				max_input_code_len = max(max_input_code_len, len(cur_sample['input_code_seq']))
-				batch_output_code_mask.append(cur_sample['output_code_mask'])
-				batch_output_df_mask.append(cur_sample['output_df_mask'])
-				batch_output_var_mask.append(cur_sample['output_var_mask'])
-				batch_output_str_mask.append(cur_sample['output_str_mask'])
-				max_output_code_mask_len = max(max_output_code_mask_len, len(cur_sample['output_code_mask']))
-				batch_gt.append(cur_sample['output_gt'])
-				batch_code_output.append(cur_sample['output_code_seq'])
-				max_output_code_len = max(max_output_code_len, len(cur_sample['output_code_seq']))
-				batch_df_output.append(cur_sample['output_code_df_seq'])
-				batch_var_output.append(cur_sample['output_code_var_seq'])
-				batch_str_output.append(cur_sample['output_code_str_seq'])
-				batch_input_code_nl_indices.append(cur_sample['input_code_nl_indices'])
-				batch_output_code_nl_indices.append(cur_sample['output_code_nl_indices'])
-				batch_output_code_ctx_indices.append(cur_sample['output_code_ctx_indices'])
+
+			batch_word_input.append(cur_sample['input_word_seq'])
+			max_word_len = max(max_word_len, len(cur_sample['input_word_seq']))
+			batch_code_input.append(cur_sample['input_code_seq'])
+			max_input_code_len = max(max_input_code_len, len(cur_sample['input_code_seq']))
+			batch_output_code_mask.append(cur_sample['output_code_mask'])
+			batch_output_df_mask.append(cur_sample['output_df_mask'])
+			batch_output_var_mask.append(cur_sample['output_var_mask'])
+			batch_output_str_mask.append(cur_sample['output_str_mask'])
+			max_output_code_mask_len = max(max_output_code_mask_len, len(cur_sample['output_code_mask']))
+			batch_gt.append(cur_sample['output_gt'])
+			batch_code_output.append(cur_sample['output_code_seq'])
+			max_output_code_len = max(max_output_code_len, len(cur_sample['output_code_seq']))
+			batch_df_output.append(cur_sample['output_code_df_seq'])
+			batch_var_output.append(cur_sample['output_code_var_seq'])
+			batch_str_output.append(cur_sample['output_code_str_seq'])
+			batch_input_code_nl_indices.append(cur_sample['input_code_nl_indices'])
+			batch_output_code_nl_indices.append(cur_sample['output_code_nl_indices'])
+			batch_output_code_ctx_indices.append(cur_sample['output_code_ctx_indices'])
 			batch_labels.append(cur_sample['label'])
 
 		batch_labels = np.array(batch_labels)
 		batch_labels = np_to_tensor(batch_labels, 'int', self.cuda_flag)
-		if self.bow:
-			batch_vectors = np.array(batch_vectors)
-			batch_vectors = np_to_tensor(batch_vectors, 'float', self.cuda_flag)
-			return batch_vectors, batch_labels
-		else:
-			for idx in range(len(batch_word_input)):
-				if len(batch_word_input[idx]) < max_word_len:
-					batch_word_input[idx] = batch_word_input[idx] + [PAD_ID] * (max_word_len - len(batch_word_input[idx]))
-			batch_word_input = np.array(batch_word_input)
-			batch_word_input = np_to_tensor(batch_word_input, 'int', self.cuda_flag)
-			input_dict['nl'] = batch_word_input
+
+		for idx in range(len(batch_word_input)):
+			if len(batch_word_input[idx]) < max_word_len:
+				batch_word_input[idx] = batch_word_input[idx] + [PAD_ID] * (max_word_len - len(batch_word_input[idx]))
+		batch_word_input = np.array(batch_word_input)
+		batch_word_input = np_to_tensor(batch_word_input, 'int', self.cuda_flag)
+		input_dict['nl'] = batch_word_input
 			
-			for idx in range(len(batch_code_input)):
-				if len(batch_code_input[idx]) < max_input_code_len:
-					batch_code_input[idx] = batch_code_input[idx] + [PAD_ID] * (max_input_code_len - len(batch_code_input[idx]))
-			batch_code_input = np.array(batch_code_input)
-			batch_code_input = np_to_tensor(batch_code_input, 'int', self.cuda_flag)
-			input_dict['code_context'] = batch_code_input
+		for idx in range(len(batch_code_input)):
+			if len(batch_code_input[idx]) < max_input_code_len:
+				batch_code_input[idx] = batch_code_input[idx] + [PAD_ID] * (max_input_code_len - len(batch_code_input[idx]))
+		batch_code_input = np.array(batch_code_input)
+		batch_code_input = np_to_tensor(batch_code_input, 'int', self.cuda_flag)
+		input_dict['code_context'] = batch_code_input
 
-			for idx in range(len(batch_code_output)):
-				if len(batch_code_output[idx]) < max_output_code_len:
-					batch_code_output[idx] = batch_code_output[idx] + [PAD_ID] * (max_output_code_len - len(batch_code_output[idx]))
-					batch_gt[idx] = batch_gt[idx] + [PAD_ID] * (max_output_code_len - len(batch_gt[idx]))
-					batch_df_output[idx] = batch_df_output[idx] + [-1] * (max_output_code_len - len(batch_df_output[idx]))
-					batch_var_output[idx] = batch_var_output[idx] + [-1] * (max_output_code_len - len(batch_var_output[idx]))
-					batch_str_output[idx] = batch_str_output[idx] + [-1] * (max_output_code_len - len(batch_str_output[idx]))
-			for idx in range(len(batch_output_code_mask)):
-				if len(batch_output_code_mask[idx]) < max_output_code_mask_len:
-					batch_output_code_mask[idx] = batch_output_code_mask[idx] + [0] * (max_output_code_mask_len - len(batch_output_code_mask[idx]))
-					batch_output_df_mask[idx] = batch_output_df_mask[idx] + [0] * (max_output_code_mask_len - len(batch_output_df_mask[idx]))
-					batch_output_var_mask[idx] = batch_output_var_mask[idx] + [0] * (max_output_code_mask_len - len(batch_output_var_mask[idx]))
-					batch_output_str_mask[idx] = batch_output_str_mask[idx] + [0] * (max_output_code_mask_len - len(batch_output_str_mask[idx]))
-			for idx in range(len(batch_input_code_nl_indices)):
-				if len(batch_input_code_nl_indices[idx]) < max_input_code_len:
-					batch_input_code_nl_indices[idx] = batch_input_code_nl_indices[idx] + [[max_word_len - 1, max_word_len - 1] for _ in range(max_input_code_len - len(batch_input_code_nl_indices[idx]))]
+		for idx in range(len(batch_code_output)):
+			if len(batch_code_output[idx]) < max_output_code_len:
+				batch_code_output[idx] = batch_code_output[idx] + [PAD_ID] * (max_output_code_len - len(batch_code_output[idx]))
+				batch_gt[idx] = batch_gt[idx] + [PAD_ID] * (max_output_code_len - len(batch_gt[idx]))
+				batch_df_output[idx] = batch_df_output[idx] + [-1] * (max_output_code_len - len(batch_df_output[idx]))
+				batch_var_output[idx] = batch_var_output[idx] + [-1] * (max_output_code_len - len(batch_var_output[idx]))
+				batch_str_output[idx] = batch_str_output[idx] + [-1] * (max_output_code_len - len(batch_str_output[idx]))
+		for idx in range(len(batch_output_code_mask)):
+			if len(batch_output_code_mask[idx]) < max_output_code_mask_len:
+				batch_output_code_mask[idx] = batch_output_code_mask[idx] + [0] * (max_output_code_mask_len - len(batch_output_code_mask[idx]))
+				batch_output_df_mask[idx] = batch_output_df_mask[idx] + [0] * (max_output_code_mask_len - len(batch_output_df_mask[idx]))
+				batch_output_var_mask[idx] = batch_output_var_mask[idx] + [0] * (max_output_code_mask_len - len(batch_output_var_mask[idx]))
+				batch_output_str_mask[idx] = batch_output_str_mask[idx] + [0] * (max_output_code_mask_len - len(batch_output_str_mask[idx]))
+		for idx in range(len(batch_input_code_nl_indices)):
+			if len(batch_input_code_nl_indices[idx]) < max_input_code_len:
+				batch_input_code_nl_indices[idx] = batch_input_code_nl_indices[idx] + [[max_word_len - 1, max_word_len - 1] for _ in range(max_input_code_len - len(batch_input_code_nl_indices[idx]))]
 
-			batch_gt = np.array(batch_gt)
-			batch_gt = np_to_tensor(batch_gt, 'int', self.cuda_flag)
-			input_dict['gt'] = batch_gt
+		batch_gt = np.array(batch_gt)
+		batch_gt = np_to_tensor(batch_gt, 'int', self.cuda_flag)
+		input_dict['gt'] = batch_gt
 			
-			batch_code_output = np.array(batch_code_output)
-			batch_code_output = np_to_tensor(batch_code_output, 'int', self.cuda_flag)
-			input_dict['code_output'] = batch_code_output
+		batch_code_output = np.array(batch_code_output)
+		batch_code_output = np_to_tensor(batch_code_output, 'int', self.cuda_flag)
+		input_dict['code_output'] = batch_code_output
 
-			batch_df_output = np.array(batch_df_output)
-			batch_df_output = np_to_tensor(batch_df_output, 'int', self.cuda_flag)
-			input_dict['df_output'] = batch_df_output
+		batch_df_output = np.array(batch_df_output)
+		batch_df_output = np_to_tensor(batch_df_output, 'int', self.cuda_flag)
+		input_dict['df_output'] = batch_df_output
 
-			batch_var_output = np.array(batch_var_output)
-			batch_var_output = np_to_tensor(batch_var_output, 'int', self.cuda_flag)
-			input_dict['var_output'] = batch_var_output
+		batch_var_output = np.array(batch_var_output)
+		batch_var_output = np_to_tensor(batch_var_output, 'int', self.cuda_flag)
+		input_dict['var_output'] = batch_var_output
 
-			batch_str_output = np.array(batch_str_output)
-			batch_str_output = np_to_tensor(batch_str_output, 'int', self.cuda_flag)
-			input_dict['str_output'] = batch_str_output
+		batch_str_output = np.array(batch_str_output)
+		batch_str_output = np_to_tensor(batch_str_output, 'int', self.cuda_flag)
+		input_dict['str_output'] = batch_str_output
 
-			batch_output_code_mask = np.array(batch_output_code_mask)
-			batch_output_code_mask = np_to_tensor(batch_output_code_mask, 'float', self.cuda_flag)
-			input_dict['code_output_mask'] = batch_output_code_mask
+		batch_output_code_mask = np.array(batch_output_code_mask)
+		batch_output_code_mask = np_to_tensor(batch_output_code_mask, 'float', self.cuda_flag)
+		input_dict['code_output_mask'] = batch_output_code_mask
 
-			batch_output_df_mask = np.array(batch_output_df_mask)
-			batch_output_df_mask = np_to_tensor(batch_output_df_mask, 'float', self.cuda_flag)
-			input_dict['output_df_mask'] = batch_output_df_mask
+		batch_output_df_mask = np.array(batch_output_df_mask)
+		batch_output_df_mask = np_to_tensor(batch_output_df_mask, 'float', self.cuda_flag)
+		input_dict['output_df_mask'] = batch_output_df_mask
 
-			batch_output_var_mask = np.array(batch_output_var_mask)
-			batch_output_var_mask = np_to_tensor(batch_output_var_mask, 'float', self.cuda_flag)
-			input_dict['output_var_mask'] = batch_output_var_mask
+		batch_output_var_mask = np.array(batch_output_var_mask)
+		batch_output_var_mask = np_to_tensor(batch_output_var_mask, 'float', self.cuda_flag)
+		input_dict['output_var_mask'] = batch_output_var_mask
 
-			batch_output_str_mask = np.array(batch_output_str_mask)
-			batch_output_str_mask = np_to_tensor(batch_output_str_mask, 'float', self.cuda_flag)
-			input_dict['output_str_mask'] = batch_output_str_mask
+		batch_output_str_mask = np.array(batch_output_str_mask)
+		batch_output_str_mask = np_to_tensor(batch_output_str_mask, 'float', self.cuda_flag)
+		input_dict['output_str_mask'] = batch_output_str_mask
 
-			batch_input_code_nl_indices = np.array(batch_input_code_nl_indices)
-			batch_input_code_nl_indices = np_to_tensor(batch_input_code_nl_indices, 'int', self.cuda_flag)
-			input_dict['input_code_nl_indices'] = batch_input_code_nl_indices
-			batch_output_code_nl_indices = np.array(batch_output_code_nl_indices)
-			batch_output_code_nl_indices = np_to_tensor(batch_output_code_nl_indices, 'int', self.cuda_flag)
-			input_dict['output_code_nl_indices'] = batch_output_code_nl_indices
-			batch_output_code_ctx_indices = np.array(batch_output_code_ctx_indices)
-			batch_output_code_ctx_indices = np_to_tensor(batch_output_code_ctx_indices, 'int', self.cuda_flag)
-			input_dict['output_code_ctx_indices'] = batch_output_code_ctx_indices
-			input_dict['init_data'] = data[start_idx: start_idx + batch_size]
-			return input_dict, batch_labels
+		batch_input_code_nl_indices = np.array(batch_input_code_nl_indices)
+		batch_input_code_nl_indices = np_to_tensor(batch_input_code_nl_indices, 'int', self.cuda_flag)
+		input_dict['input_code_nl_indices'] = batch_input_code_nl_indices
+		batch_output_code_nl_indices = np.array(batch_output_code_nl_indices)
+		batch_output_code_nl_indices = np_to_tensor(batch_output_code_nl_indices, 'int', self.cuda_flag)
+		input_dict['output_code_nl_indices'] = batch_output_code_nl_indices
+		batch_output_code_ctx_indices = np.array(batch_output_code_ctx_indices)
+		batch_output_code_ctx_indices = np_to_tensor(batch_output_code_ctx_indices, 'int', self.cuda_flag)
+		input_dict['output_code_ctx_indices'] = batch_output_code_ctx_indices
+		input_dict['init_data'] = data[start_idx: start_idx + batch_size]
+		return input_dict, batch_labels
